@@ -22,13 +22,13 @@ const app = app => {
         })
 
         socket.on('request-map.distance', (tile, distance, callback) => {
-            const center_hex = {vector: tile}
-            let requested_hexes = []
-            for (let hex of map) {
-                if (hex.distance(center_hex) === distance) {
-                    requested_hexes.push(hex)
-                }
-            }
+            const center_hex = {vector: tile}   
+            let requested_hexes = map.bfs(center_hex,distance)
+            // for (let hex of map) {
+            //     if (hex.distance(center_hex) === distance) {
+            //         requested_hexes.push(hex)
+            //     }
+            // }
             callback(requested_hexes)
         })
 

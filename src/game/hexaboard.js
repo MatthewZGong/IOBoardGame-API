@@ -1,8 +1,36 @@
-
+class Queue {
+    constructor() {
+      this.items = {};
+      this.headIndex = 0;
+      this.tailIndex = 0;
+    }
+  
+    enqueue(item) {
+      this.items[this.tailIndex] = item;
+      this.tailIndex++;
+    }
+  
+    dequeue() {
+      const item = this.items[this.headIndex];
+      delete this.items[this.headIndex];
+      this.headIndex++;
+      return item;
+    }
+  
+    peek() {
+      return this.items[this.headIndex];
+    }
+  
+    length() {
+      return this.tailIndex - this.headIndex;
+    }
+  }
+  
 class Hex{
-    static directions =[ new Hex(1, 0, -1), new Hex(1, -1, 0), new Hex(0, -1, 1), new Hex(-1, 0, 1), new Hex(-1, 1, 0), new Hex(0, 1, -1)]
+    static directions =[ new Hex(1, 0, -1), new Hex(1, -1, 0), new Hex(0, -1, 1), new Hex(-1, 0, 1), new Hex(-1, 1, 0), new Hex(0, 1, -1)];
     constructor(q,r,s = -q-r){
         this.vector = [q,r,s];
+        this.object = null 
     }
     // constructor(q,r){
     //     this.vector = [q,r,-q-r];
@@ -30,7 +58,7 @@ class Hex{
     }
     neighbor(d){
         d = (6 + (d % 6)) % 6
-        return this.add(this.direction[d])
+        return this.add(Hex.directions[d])
     }
     toString(){
         return this.vector.toString()
@@ -54,6 +82,7 @@ class Hex{
         return new Hex(qi, ri, si);
     }
 }
+Hex.prototype.toString = function(){ return this.vector.toString(); }
 class Layout{
     
     constructor(orientation, size, origin){
@@ -108,7 +137,7 @@ class Point{
 
 class MapClient{
     constructor(){
-        this.m = new Set() 
+        this.m = {};
         var or = new Orientation(Math.sqrt(3.0), Math.sqrt(3.0) / 2.0, 0.0, 3.0 / 2.0, Math.sqrt(3.0) / 3.0, -1.0 / 3.0, 0.0, 2.0 / 3.0, 0.5);
         this.layout = new Layout(or, new Point(50, 50), new Point(400, 400));
     }
@@ -116,7 +145,8 @@ class MapClient{
 
         for(var q = -(width>>1); q < width>>1; q++){
             for(let r = -(length>>1); r< length>>1; r++){
-                this.m.add(new Hex(q,r))
+                let new_hex = new Hex(q,r);
+                this.m[new_hex.toString()] = new_hex
             }
         }
     }
@@ -125,7 +155,8 @@ class MapClient{
             var r1 = Math.max(-radius, -q - radius);
             var r2 = Math.min(radius, -q + radius);
             for (let r = r1; r <= r2; r++) {
-                this.m.add(new Hex(q, r, -q-r));
+                let new_hex = new Hex(q,r);
+                this.m[new_hex.toString()] = new_hex
             }
         }
     }
@@ -133,7 +164,8 @@ class MapClient{
         for (var r = -(map_height>>1); r < map_height>>1; r++) {
             var r_offset = r >> 1;  // or r>>1
             for (var q = -r_offset-(map_width>>1); q < (map_width>>1) - r_offset; q++) {
-                this.m.add(new Hex(q, r, -q-r));
+                let new_hex = new Hex(q,r);
+                this.m[new_hex.toString()] = new_hex
             }
         }
     }
@@ -144,9 +176,31 @@ class MapClient{
         return this.layout.pixelToHex(point);
     }
     *[Symbol.iterator]() {
-        for(let hexa of this.m){
-            yield hexa
+        for(let key in this.m){
+            yield this.m[key]
         }
+    }
+    bfs(hex,distance){
+        let queue = new Queue();
+        hex = new Hex(hex.vector[0],hex.vector[1],hex.vector[2])
+        queue.enqueue(hex);
+        let stop = false;
+        let res = [];
+        while(queue.length() != 0 && stop == false ){
+            let current_hex = queue.dequeue();
+            if(current_hex.distance(hex) > distance){
+                stop = true;
+            }else{
+                if(current_hex.toString() in this.m && this.m[current_hex.toString()].object == null){
+                    res.push(current_hex);
+                    for(let i = 0; i < 6; i++){
+                        queue.enqueue(current_hex.neighbor(i));
+
+                    }
+                }
+            }
+        }
+        return res
     }
 }
 
@@ -179,15 +233,21 @@ function ParallelogramMap(width, length) {
     return map;
 }
 
-var flat_top = new Orientation(3.0 / 2.0, 0.0, Math.sqrt(3.0) / 2.0, Math.sqrt(3.0), 2.0 / 3.0, 0.0, -1.0 / 3.0, Math.sqrt(3.0) / 3.0, 0.0);
-var pointy_top = new Orientation(Math.sqrt(3.0), Math.sqrt(3.0) / 2.0, 0.0, 3.0 / 2.0, Math.sqrt(3.0) / 3.0, -1.0 / 3.0, 0.0, 2.0 / 3.0, 0.5);
-var test_map = new MapClient();
-var test = new Layout(flat_top, new Point(50,50), new Point(400,300));
-test_map.hexagon(5)
-console.log("hi")
-for(let test of test_map){
-    console.log(test)
-}
+// var flat_top = new Orientation(3.0 / 2.0, 0.0, Math.sqrt(3.0) / 2.0, Math.sqrt(3.0), 2.0 / 3.0, 0.0, -1.0 / 3.0, Math.sqrt(3.0) / 3.0, 0.0);
+// var pointy_top = new Orientation(Math.sqrt(3.0), Math.sqrt(3.0) / 2.0, 0.0, 3.0 / 2.0, Math.sqrt(3.0) / 3.0, -1.0 / 3.0, 0.0, 2.0 / 3.0, 0.5);
+// var test_map = new MapClient();
+// var test = new Layout(flat_top, new Point(50,50), new Point(400,300));
+// test_map.hexagon(5)
+// console.log("hi")
+// let test_vec = new Hex(5,0)
+// console.log(test_map.m)
+// console.log(test_vec)
+// console.log(test_vec.toString() in test_map.m)
+// console.log("h")
+// for(let hex of test_map){
+//     console.log(hex)
+// }
+
 // test_map.m.forEach((value) => { 
 //     console.log(test.hexToPixel(value) )
 // })
