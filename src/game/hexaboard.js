@@ -32,6 +32,9 @@ class Hex{
         this.vector = [q,r,s];
         this.object = null 
     }
+    setVector(v){
+        this.vector = v
+    }
     // constructor(q,r){
     //     this.vector = [q,r,-q-r];
     // }
@@ -201,6 +204,13 @@ class MapClient{
             }
         }
         return res
+    }
+    getHexMap(){
+        let hexs = [] 
+        for(let key in this.m){
+            hexs.push(this.m[key])
+        }
+        return hexs 
     }
 }
 
