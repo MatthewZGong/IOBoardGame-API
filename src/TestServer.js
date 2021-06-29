@@ -1,6 +1,6 @@
 import { Server } from 'socket.io';
 import http from 'node:http';
-import {MapClient} from "./game/hexaboard.js";
+import {MapClient, Hex} from "./game/hexaboard.js";
 const server = http.createServer();
 
 const io = new Server(server, {
@@ -65,8 +65,15 @@ io.on('connection', (socket) => {
 
     socket.on('request-char.actions', (charId, callback) => {
         const char = charId === 1 ? ally_char : def_char
-        const {atk_acts, def_acts, idle_acts} = char
-        callback(atk_acts, def_acts, idle_acts)
+        const other = charId === 1 ? def_char : ally_char
+
+        const charHex = new Hex(char.pos[0], char.pos[1])
+        const otherHex = new Hex(other.pos[0], other.pos[1])
+        const dist = charHex.distance(otherHex)
+
+        const {atk_acts, idle_acts} = char
+
+        callback((dist <= 1 ? atk_acts : []).concat(idle_acts))
     })
 
 

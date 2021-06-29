@@ -267,4 +267,4 @@ function ParallelogramMap(width, length) {
 // console.log( test.getPolygonCorners(test_hex));
 // console.log( test.hexToPixel(test_hex));s
 
-export {MapClient, Layout, Orientation, Point, HexagonMap, ParallelogramMap}
+export {Hex, MapClient, Layout, Orientation, Point, HexagonMap, ParallelogramMap}
