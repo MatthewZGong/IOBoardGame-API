@@ -1,22 +1,25 @@
-import { MapClient } from "../game/hexaboard.js";
+import GameClient from "../game/gameClient.js"
 
 export default class RoomManager{
-    constructor(){
-        this.rooms = null; 
+    constructor(server, namespace){
+        this.socRoom= {}; 
+        this.rooms = new Set();
         this.gameclients = {};
         this.queue = new Queue();
         this.room_num = 1
-        
+        this.io = server
+        this.namespace = namespace
+        this.roomSetUp(server)
 
     }
-    joinClassicQueue(socketID,io){
+    joinClassicQueue(socketID){
         if(this.queue.peek() == null){
             this.queue.enqueue(socketID);
         }else{
             //console.log(io)
             let player1ID = this.queue.dequeue()  
             //console.log(io.of("/"))
-            let namesapceIO = io.of("/")
+            let namesapceIO = this.io.of(this.namespace)
             let player1 = namesapceIO.sockets.get(player1ID)
             let player2 = namesapceIO.sockets.get(socketID)
             let new_room = `room${this.room_num}`
@@ -24,19 +27,61 @@ export default class RoomManager{
             this.room_num += 1 
             player1.join(new_room)
             player2.join(new_room)
-            let map = new MapClient();
-            this.gameclients[new_room] = map;
-            map.hexagon(5);
+            let game = new GameClient();
+            this.gameclients[new_room] = game;
+            game.gameStart(new_room);
+            this.rooms.add(new_room)
+            this.socRoom[player1.id] = new_room
+            this.socRoom[player2.id] = new_room
+
             this.gameINIT(player1)
             this.gameINIT(player2)
-            io.to(new_room).emit("game-start")
+            this.io.to(new_room).emit("game-start")
         }
     }
+    roomSetUp(io){
+      io.of(this.namespace).adapter.on("create-room", (room) => {
+        console.log(`room ${room} was created`);
+      });
+      // io.of(this.namespace).adapter.on("leave-room", (room, id) => {
+      //     console.log(`${id} left ${room}`)
+      //     if(this.rooms.has(room)){
+      //       this.deleteRoom(room)
+      //     }
+      // });
+      io.of(this.namespace).adapter.on("delete-room", (room) => {
+        console.log(`${room} was deleted`)
+    });
+
+    }
+    deleteRoom(room){
+      if(this.rooms.has(room)){
+        this.rooms.delete(room)
+        console.log(this.rooms)
+        delete this.gameclients[room]
+        this.io.to(room).emit("game-stop")
+      }
+    } 
     gameINIT(socket){
       socket.on('request-map', (callback) => {
         console.log("request-map 2")
-        callback(this.getHexMap("room1"))
+        if(!(socket.id in this.socRoom)){
+          return 
+        }
+        callback(this.getHexMap(this.socRoom[socket.id]))
       })
+      socket.on('request-map.distance', (tile, distance, callback) => {
+        const center_hex = {vector: tile}   
+        if(!(socket.id in this.socRoom)){
+          return 
+        }
+        if(!(this.socRoom[socket.id] in this.gameclients)){
+          return 
+        }
+        let requested_hexes = this.gameclients[this.socRoom[socket.id]].getPath(center_hex,distance)
+        callback(requested_hexes)
+      })
+
 
     }
     getHexMap(roomID){
