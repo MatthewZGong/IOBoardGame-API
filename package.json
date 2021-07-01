@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "description": "test",
   "scripts": {
-    "start": "node src/App.js"
+    "start": "node src/App.js",
+    "test" : "node src/TestServer.js"
   },
   "type": "module",
   "keywords": [],
